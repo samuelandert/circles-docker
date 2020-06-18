@@ -1,3 +1,7 @@
+"""
+Base settings to build other settings files upon.
+"""
+
 import environ
 
 ROOT_DIR = environ.Path(__file__) - 3 # (safe_relay_service/config/settings/base.py - 3 = safe-relay-service/)
@@ -12,7 +16,9 @@ if READ_DOT_ENV_FILE or DOT_ENV_FILE:
     # OS environment variables take precedence over variables from .env
     env.read_env(str(ROOT_DIR.path(DOT_ENV_FILE)))
 
+# ------------------------------------------------------------------------------
 # GENERAL
+# ------------------------------------------------------------------------------
 
 DEBUG = env.bool('DJANGO_DEBUG', False)
 TIME_ZONE = 'UTC'
@@ -22,7 +28,9 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
+# ------------------------------------------------------------------------------
 # DATABASES
+# ------------------------------------------------------------------------------
 
 psql_url = 'psql://' + env('POSTGRES_USER') + ':' + env('POSTGRES_PASSWORD') + '@db:5432/' + env('POSTGRES_DATABASE_RELAYER')
 
@@ -32,12 +40,16 @@ DATABASES = {
 
 DATABASES['default']['ATOMIC_REQUESTS'] = True
 
+# ------------------------------------------------------------------------------
 # URLS
+# ------------------------------------------------------------------------------
 
 ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# ------------------------------------------------------------------------------
 # APPS
+# ------------------------------------------------------------------------------
 
 DJANGO_APPS = [
     'django.contrib.admin',
@@ -64,7 +76,9 @@ LOCAL_APPS = [
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
+# ------------------------------------------------------------------------------
 # MIDDLEWARE
+# ------------------------------------------------------------------------------
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -76,7 +90,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# ------------------------------------------------------------------------------
 # STATIC
+# ------------------------------------------------------------------------------
 
 STATIC_ROOT = '/usr/share/nginx/html/relayer';
 
@@ -91,12 +107,16 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
+# ------------------------------------------------------------------------------
 # MEDIA
+# ------------------------------------------------------------------------------
 
 MEDIA_ROOT = str(APPS_DIR('media'))
 MEDIA_URL = '/media/'
 
+# ------------------------------------------------------------------------------
 # TEMPLATES
+# ------------------------------------------------------------------------------
 
 TEMPLATES = [
     {
@@ -124,17 +144,23 @@ TEMPLATES = [
     },
 ]
 
+# ------------------------------------------------------------------------------
 # FIXTURES
+# ------------------------------------------------------------------------------
 
 FIXTURE_DIRS = (
     str(APPS_DIR.path('fixtures')),
 )
 
+# ------------------------------------------------------------------------------
 # EMAIL
+# ------------------------------------------------------------------------------
 
 EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
 
+# ------------------------------------------------------------------------------
 # ADMIN
+# ------------------------------------------------------------------------------
 
 ADMIN_URL = r'^admin/'
 
@@ -144,7 +170,9 @@ ADMINS = [
 
 MANAGERS = ADMINS
 
+# ------------------------------------------------------------------------------
 # Celery
+# ------------------------------------------------------------------------------
 
 INSTALLED_APPS += [
     'safe_relay_service.taskapp.celery.CeleryConfig',
@@ -156,8 +184,11 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
+CELERY_TASK_IGNORE_RESULT = True
 
+# ------------------------------------------------------------------------------
 # Django REST Framework
+# ------------------------------------------------------------------------------
 
 REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
@@ -173,7 +204,9 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'safe_relay_service.relay.views.custom_exception_handler',
 }
 
+# ------------------------------------------------------------------------------
 # LOGGING
+# ------------------------------------------------------------------------------
 
 LOGGING = {
     'version': 1,
@@ -208,6 +241,11 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
         },
+        'celery': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,  # If not it will be out for the root logger too
+        },
         'celery.worker.strategy': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
@@ -231,46 +269,56 @@ LOGGING = {
     }
 }
 
+# ------------------------------------------------------------------------------
+# REDIS
+# ------------------------------------------------------------------------------
+
 REDIS_URL = env('RELAYER_REDIS_URL', default='redis://localhost:6379/0')
 
+# ------------------------------------------------------------------------------
 # ETHEREUM
+# ------------------------------------------------------------------------------
 
 ETH_HASH_PREFIX = env('ETH_HASH_PREFIX', default='ETH')
 ETHEREUM_NODE_URL = env('ETHEREUM_NODE_ENDPOINT', default=None)
-ETHEREUM_TRACING_NODE_URL = env('ETHEREUM_TRACING_NODE_URL', default=ETHEREUM_NODE_URL)
 
 GAS_STATION_NUMBER_BLOCKS = env('GAS_STATION_NUMBER_BLOCKS', default=300)
 
+# ------------------------------------------------------------------------------
 # SAFE
+# ------------------------------------------------------------------------------
 
 SAFE_FUNDER_PRIVATE_KEY = env('SAFE_FUNDER_PRIVATE_KEY', default=None)
-
 # Maximum ether (no wei) for a single transaction (security limit)
 SAFE_FUNDER_MAX_ETH = env.int('SAFE_FUNDER_MAX_ETH', default=0.1)
-
 SAFE_FUNDING_CONFIRMATIONS = env.int('SAFE_FUNDING_CONFIRMATIONS', default=0)  # Set to at least 3
-
 # Master Copy Address of Safe Contract
-SAFE_CONTRACT_ADDRESS = env('SAFE_ADDRESS', default='0x' + '0' * 39 + '1')
-
-SAFE_OLD_CONTRACT_ADDRESS = env('SAFE_OLD_CONTRACT_ADDRESS', default='0x' + '0' * 39 + '1')
-
-SAFE_VALID_CONTRACT_ADDRESSES = set(env.list('SAFE_VALID_CONTRACT_ADDRESSES', default=[])) | {SAFE_CONTRACT_ADDRESS, SAFE_OLD_CONTRACT_ADDRESS}
-
-SAFE_PROXY_FACTORY_ADDRESS = env('PROXY_FACTORY_ADDRESS', default='0x' + '0' * 39 + '2')
+SAFE_CONTRACT_ADDRESS = env('SAFE_ADDRESS', default='0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F')
+SAFE_V1_0_0_CONTRACT_ADDRESS = env('SAFE_V1_0_0_CONTRACT_ADDRESS', default='0xb6029EA3B2c51D09a50B53CA8012FeEB05bDa35A')
+SAFE_V0_0_1_CONTRACT_ADDRESS = env('SAFE_V0_0_1_CONTRACT_ADDRESS', default='0x8942595A2dC5181Df0465AF0D7be08c8f23C93af')
+SAFE_VALID_CONTRACT_ADDRESSES = set(env.list('SAFE_VALID_CONTRACT_ADDRESSES',
+                                             default=['0xaE32496491b53841efb51829d6f886387708F99B',
+                                                      '0xb6029EA3B2c51D09a50B53CA8012FeEB05bDa35A'
+                                                      '0x8942595A2dC5181Df0465AF0D7be08c8f23C93af',
+                                                      '0xAC6072986E985aaBE7804695EC2d8970Cf7541A2'])
+                                    ) | {SAFE_CONTRACT_ADDRESS,
+                                         SAFE_V1_0_0_CONTRACT_ADDRESS,
+                                         SAFE_V0_0_1_CONTRACT_ADDRESS}
+SAFE_PROXY_FACTORY_ADDRESS = env('PROXY_FACTORY_ADDRESS', default='0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B')
+SAFE_PROXY_FACTORY_V1_0_0_ADDRESS = env('SAFE_PROXY_FACTORY_V1_0_0_ADDRESS',
+                                        default='0x12302fE9c02ff50939BaAaaf415fc226C078613C')
+SAFE_DEFAULT_CALLBACK_HANDLER = env('SAFE_DEFAULT_CALLBACK_HANDLER',
+                                    default='0xd5D82B6aDDc9027B22dCA772Aa68D5d74cdBdF44')
 
 # If FIXED_GAS_PRICE is None, GasStation will be used
 FIXED_GAS_PRICE = env.int('FIXED_GAS_PRICE', default=None)
-
 SAFE_TX_SENDER_PRIVATE_KEY = env('SAFE_TX_SENDER_PRIVATE_KEY', default=None)
 
 SAFE_CHECK_DEPLOYER_FUNDED_DELAY = env.int('SAFE_CHECK_DEPLOYER_FUNDED_DELAY', default=1 * 30)
-
 SAFE_CHECK_DEPLOYER_FUNDED_RETRIES = env.int('SAFE_CHECK_DEPLOYER_FUNDED_RETRIES', default=10)
-
 SAFE_FIXED_CREATION_COST = env.int('SAFE_FIXED_CREATION_COST', default=None)
-
 SAFE_ACCOUNTS_BALANCE_WARNING = env.int('SAFE_ACCOUNTS_BALANCE_WARNING', default=200000000000000000)  # 0.2 Eth
+SAFE_TX_NOT_MINED_ALERT_MINUTES = env('SAFE_TX_NOT_MINED_ALERT_MINUTES', default=15)
 
 NOTIFICATION_SERVICE_URI = env('NOTIFICATION_SERVICE_URI', default=None)
 NOTIFICATION_SERVICE_PASS = env('NOTIFICATION_SERVICE_PASS', default=None)
@@ -278,9 +326,9 @@ NOTIFICATION_SERVICE_PASS = env('NOTIFICATION_SERVICE_PASS', default=None)
 TOKEN_LOGO_BASE_URI = env('TOKEN_LOGO_BASE_URI', default='')
 TOKEN_LOGO_EXTENSION = env('TOKEN_LOGO_EXTENSION', default='.png')
 
-INTERNAL_TXS_BLOCK_PROCESS_LIMIT = env('INTERNAL_TXS_BLOCK_PROCESS_LIMIT', default=100000)
-
+# ------------------------------------------------------------------------------
 # CIRCLES
+# ------------------------------------------------------------------------------
 
 CIRCLES_HUB_ADDRESS = env('HUB_ADDRESS', default='0x' + '0' * 39 + '2')
 
